@@ -40,15 +40,21 @@ def loadModel(path="./"):
 
 def preproccess_img(img):
     img = cv2.resize(img, (224, 224))
-    tensor = np.array(img)
+    tensor = np.array(img, dtype=np.float32)
     tensor = tensor / 255.0
     # tensor = np.expand_dims(tensor, axis=0) / 255.0
     return tensor
 
 
-model = loadModel("./models/dogcat_from_ML_V3")
+# model = loadModel("./models/dogcat_from_ML_V3")
+model = None
 
 classes = np.array(['cat', 'dog'])
+
+def getClassesFromModelResult(result):
+    predicted_id = tf.math.argmax(result, axis=-1)
+    predicted_label_batch = classes[predicted_id]
+    return predicted_label_batch
 
 
 def predict(model, imgs):
@@ -132,8 +138,10 @@ while True:
         processed_img = preproccess_img(cropedFrame)
 
         # predict with tflite
-        tflitePredict(interpreter, (input_details,
+        tf_lite_pred_output = tflitePredict(interpreter, (input_details,
                       output_details), processed_img)
+        result = getClassesFromModelResult(tf_lite_pred_output)
+        print(result)
 
         # result = predict(model, processed_img)
         # print(result)
