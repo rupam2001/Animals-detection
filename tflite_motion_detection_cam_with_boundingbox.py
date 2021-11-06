@@ -6,17 +6,20 @@ import time
 import cv2
 import tensorflow as tf
 import numpy as np
+
+import math_operations as mathops
+
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
 ap.add_argument("-a", "--min-area", type=int,
-                default=1600, help="minimum area size")
+                default=1000, help="minimum area size")
 ap.add_argument("-ma", "--max-area", type=int,
                 default=90000, help="maximum area size")
 
 args = vars(ap.parse_args())
 
-NUM_BOXES = 5
+NUM_BOXES = 10
 
 # if the video argument is None, then we are reading from webcam
 if args.get("video", None) is None:
@@ -49,7 +52,7 @@ def preproccess_img(img):
 # model = loadModel("./models/dogcat_from_ML_V3")
 model = None
 
-classes = np.array(['cat', 'dog'])
+classes = np.array(['cat', 'dog', 'nothing', 'nothing'])
 
 def getClassesFromModelResult(result):
     predicted_id = tf.math.argmax(result, axis=-1)
@@ -71,9 +74,9 @@ def initTflite(path_to_model='./models/dogcat_from_ML_V3.tflite'):
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     # input details
-    print("interpreter-input-details : ", input_details)
+    # print("interpreter-input-details : ", input_details)
     # output details
-    print("interpreter-output-details : ", output_details)
+    # print("interpreter-output-details : ", output_details)
     interpreter.allocate_tensors()
     return interpreter, input_details, output_details
 
@@ -85,7 +88,7 @@ def tflitePredict(interpreter, IOdetails, image):
     return output_data
 
 
-interpreter, input_details, output_details = initTflite()
+interpreter, input_details, output_details = initTflite(path_to_model="./models/dogcat_nothing.tflite")
 
 
 # initialize the first frame in the video stream
@@ -120,6 +123,8 @@ while True:
     cnts = imutils.grab_contours(cnts)
     # loop over the contours
     count = 0
+    box_list = []
+    frame_copy = np.array(frame, copy=True)  
     for c in cnts:
         if count >= NUM_BOXES:
             break
@@ -133,6 +138,7 @@ while True:
             # compute the bounding box for the contour, draw it on the frame,
             # and update the text
         (x, y, w, h) = cv2.boundingRect(c)
+        box_list.append((x, y, w, h))
 
         cropedFrame = cropImg(frame, x, y, w, h)
         processed_img = preproccess_img(cropedFrame)
@@ -141,16 +147,31 @@ while True:
         tf_lite_pred_output = tflitePredict(interpreter, (input_details,
                       output_details), processed_img)
         result = getClassesFromModelResult(tf_lite_pred_output)
-        print(result)
-
-        # result = predict(model, processed_img)
         # print(result)
+
         count += 1
-        # if result == 'dog':
-        #     cv2.imwrite(f"{time.time()}.png", cropedFrame)
 
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         text = "Occupied"
+    if len(box_list) > 1:
+        unioned_box = mathops.getUnionOfRects(rect_list=box_list)
+        if unioned_box is not None:
+            x, y, w, h = unioned_box[0], unioned_box[1], unioned_box[2], unioned_box[3]
+            unioned_image = cropImg(frame_copy, x, y, w, h)
+            # predict here >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+            unioned_image_preprocessed = preproccess_img(unioned_image)
+            tf_lite_pred_output = tflitePredict(interpreter, (input_details,
+            output_details), processed_img)
+            result = getClassesFromModelResult(tf_lite_pred_output)
+            print(result)
+
+            try:
+                print( "writing image ", unioned_box)
+                cv2.imwrite(f"{time.time()}.{result}.png", unioned_image)
+            except:
+                print("error writing image ", unioned_box)
+
+
     # draw the text and timestamp on the frame
     cv2.putText(frame, "Room Status: {}".format(text), (10, 20),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
@@ -164,7 +185,7 @@ while True:
     # if the `q` key is pressed, break from the lop
     if key == ord("q"):
         break
-    # firstFrame = gray  #if we only want to detect the object when it moves
+    firstFrame = gray  #if we only want to detect the object when it moves
 
 
 # cleanup the camera and close any open windows
