@@ -52,7 +52,7 @@ def loadModel(path="./"):
     model = tf.keras.models.load_model(path)
     return model
 
-model = loadModel("./models/dogcatv31636093486")
+model = loadModel("./models/dogcat_from_ML_V3")
 
 def preprocess_img(img):
     img = cv2.resize(img, (224, 224))

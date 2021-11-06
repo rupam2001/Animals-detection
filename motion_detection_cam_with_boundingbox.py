@@ -4,6 +4,8 @@ import datetime
 import imutils
 import time
 import cv2
+import tensorflow as tf
+import numpy as np
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
@@ -20,7 +22,30 @@ else:
 
 def cropImg(frame, x, y, w, h):
     croped_img = frame[y:(y+h), x:(x+w)]
+    return croped_img
     cv2.imwrite(f"{time.time()}.png", croped_img)
+
+
+def loadModel(path="./"):
+    model = tf.keras.models.load_model(path)
+    return model
+
+def preproccess_img(img):
+    img = cv2.resize(img, (224, 224))
+    tensor = np.array(img)
+    tensor = np.expand_dims(tensor, axis=0) / 255.0
+    return tensor
+
+
+
+model = loadModel("./models/dogcat_from_ML_V3")
+
+classes = np.array(['cat', 'dog'])
+def predict(model, imgs):
+    result = model.predict(imgs)
+    predicted_id = tf.math.argmax(result, axis=-1)
+    predicted_label_batch = classes[predicted_id]
+    return predicted_label_batch
 
 # initialize the first frame in the video stream
 firstFrame = None
@@ -59,9 +84,14 @@ while True:
 		# compute the bounding box for the contour, draw it on the frame,
 		# and update the text
         (x, y, w, h) = cv2.boundingRect(c)
-        if abs(h - w) > w*2 or abs(h - w) > h*2: #for two narrows
-            continue
-        cropImg(frame, x, y, w, h)
+
+        cropedFrame = cropImg(frame, x, y, w, h)
+        processed_img = preproccess_img(cropedFrame)
+        result = predict(model, processed_img)
+        print(result)
+
+
+
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         text = "Occupied"
     # draw the text and timestamp on the frame
@@ -75,6 +105,8 @@ while True:
 	# if the `q` key is pressed, break from the lop
     if key == ord("q"):
         break
+    firstFrame = gray  #if we only want to detect the object when it moves
+
 
 
 # cleanup the camera and close any open windows
