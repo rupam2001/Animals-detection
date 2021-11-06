@@ -9,8 +9,12 @@ import numpy as np
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
-ap.add_argument("-a", "--min-area", type=int, default=2000, help="minimum area size")
+ap.add_argument("-a", "--min-area", type=int, default=1600, help="minimum area size")
+ap.add_argument("-ma", "--max-area", type=int, default=90000, help="maximum area size")
+
 args = vars(ap.parse_args())
+
+NUM_BOXES = 5
 
 # if the video argument is None, then we are reading from webcam
 if args.get("video", None) is None:
@@ -77,9 +81,16 @@ while True:
     cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
 	# loop over the contours
+    count = 0
     for c in cnts:
+        if count >= NUM_BOXES:
+            break
         # if the contour is too small, ignore it
         if cv2.contourArea(c) < args["min_area"]:
+            # print("Min-box skipped")
+            continue
+        if cv2.contourArea(c) > args['max_area']:
+            # print("Maxed box skipped")
             continue
 		# compute the bounding box for the contour, draw it on the frame,
 		# and update the text
@@ -89,6 +100,11 @@ while True:
         processed_img = preproccess_img(cropedFrame)
         result = predict(model, processed_img)
         print(result)
+        count += 1
+        if result == 'dog':
+            cv2.imwrite(f"{time.time()}.png", cropedFrame)
+
+
 
 
 
@@ -105,7 +121,7 @@ while True:
 	# if the `q` key is pressed, break from the lop
     if key == ord("q"):
         break
-    firstFrame = gray  #if we only want to detect the object when it moves
+    # firstFrame = gray  #if we only want to detect the object when it moves
 
 
 
