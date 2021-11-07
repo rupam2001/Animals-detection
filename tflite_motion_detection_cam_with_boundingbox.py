@@ -88,7 +88,9 @@ def tflitePredict(interpreter, IOdetails, image):
     return output_data
 
 
-interpreter, input_details, output_details = initTflite(path_to_model="./models/dogcat_nothing.tflite")
+test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite"]
+
+interpreter, input_details, output_details = initTflite(path_to_model=test_models[0])
 
 
 # initialize the first frame in the video stream
@@ -140,36 +142,58 @@ while True:
         (x, y, w, h) = cv2.boundingRect(c)
         box_list.append((x, y, w, h))
 
-        cropedFrame = cropImg(frame, x, y, w, h)
-        processed_img = preproccess_img(cropedFrame)
+        # cropedFrame = cropImg(frame, x, y, w, h)
+        # processed_img = preproccess_img(cropedFrame)
 
-        # predict with tflite
-        tf_lite_pred_output = tflitePredict(interpreter, (input_details,
-                      output_details), processed_img)
-        result = getClassesFromModelResult(tf_lite_pred_output)
+        # # predict with tflite
+        # tf_lite_pred_output = tflitePredict(interpreter, (input_details,
+        #               output_details), processed_img)
+        # result = getClassesFromModelResult(tf_lite_pred_output)
         # print(result)
 
         count += 1
 
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        text = "Occupied"
-    if len(box_list) > 1:
-        unioned_box = mathops.getUnionOfRects(rect_list=box_list)
+
+
+    if len(box_list) >= 1:
+        unioned_box, indexes_to_exclude = mathops.getUnionOfRects(rect_list=box_list)
         if unioned_box is not None:
             x, y, w, h = unioned_box[0], unioned_box[1], unioned_box[2], unioned_box[3]
+
+            #show the union box
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
             unioned_image = cropImg(frame_copy, x, y, w, h)
-            # predict here >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+            # predict here 
             unioned_image_preprocessed = preproccess_img(unioned_image)
             tf_lite_pred_output = tflitePredict(interpreter, (input_details,
             output_details), processed_img)
             result = getClassesFromModelResult(tf_lite_pred_output)
             print(result)
+            cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
 
             try:
                 print( "writing image ", unioned_box)
                 cv2.imwrite(f"{time.time()}.{result}.png", unioned_image)
             except:
                 print("error writing image ", unioned_box)
+                
+        for bi in range(len(box_list)):
+            if bi not in indexes_to_exclude:
+                (x, y, w, h) = box_list[bi]
+
+                cropedFrame = cropImg(frame_copy, x, y, w, h)
+                processed_img = preproccess_img(cropedFrame)
+
+                # predict with tflite
+                tf_lite_pred_output = tflitePredict(interpreter, (input_details,
+                            output_details), processed_img)
+                result = getClassesFromModelResult(tf_lite_pred_output)
+                print(result, " (not union result)")
+                cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
 
     # draw the text and timestamp on the frame

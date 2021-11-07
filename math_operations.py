@@ -47,16 +47,19 @@ def getUnionOfTwoRects(rect1, rect2):
 
 def  getUnionOfRects(rect_list=[]):
     overlaped_rects = []
+    overlaped_rects_indexs = []
     uniooned_rects = None
     for i in range(len(rect_list) - 1):
         r1, r2 = rect_list[i], rect_list[i + 1]
         if isTwoRectangeOverlap(r1, r2):
             overlaped_rects.append(r1)
             overlaped_rects.append(r2)
+            overlaped_rects_indexs.append(i)
+            overlaped_rects_indexs.append(i + 1)
             rect_list[i + 1] = getUnionOfTwoRects(r1, r2)
             uniooned_rects = rect_list[ i + 1]
     if uniooned_rects is not None and all(i <= 0 for i in uniooned_rects):
         return None
     
-    return uniooned_rects
+    return uniooned_rects, overlaped_rects_indexs
     
