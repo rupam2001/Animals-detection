@@ -19,8 +19,10 @@ IS_SAVING_IMAGE = False
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
 ap.add_argument("-f", "--frametoskip", default=30, help="frames to skip")
+ap.add_argument("-d", "--delay", help="delay of the frames play in seconds")
+
 ap.add_argument("-a", "--min-area", type=int,
-                default=1000, help="minimum area size")
+                default=1000, help="minimum area size, area = (w x h) in pixel")
 ap.add_argument("-ma", "--max-area", type=int,
                 default=90000, help="maximum area size")
 
@@ -28,7 +30,10 @@ args = vars(ap.parse_args())
 
 print(args.get("video"))
 
-NUM_BOXES = 10
+
+delay = args.get("delay", None)
+
+NUM_BOXES = 20
 
 # if the video argument is None, then we are reading from webcam
 if args.get("video", None) is None:
@@ -53,7 +58,7 @@ def loadModel(path="./"):
 def preproccess_img(img):
     img = cv2.resize(img, (224, 224))
     tensor = np.array(img, dtype=np.float32)
-    tensor = tensor / 255.0
+    # tensor = tensor / 255.0
     # tensor = np.expand_dims(tensor, axis=0) / 255.0
     return tensor
 
@@ -66,6 +71,7 @@ classes = np.array(["Animal", "Nothing"])
 def getClassesFromModelResult(result):
     predicted_id = tf.math.argmax(result, axis=-1)
     predicted_label_batch = classes[predicted_id]
+
     return predicted_label_batch
 
 
@@ -166,7 +172,7 @@ while True:
 
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-
+    indexes_to_exclude = []
     if len(box_list) >= 1:
         unioned_box, indexes_to_exclude = mathops.getUnionOfRects(rect_list=box_list)
         if unioned_box is not None:
@@ -223,9 +229,11 @@ while True:
     if key == ord("q"):
         break
     curr_time = time.time()
-    if curr_time - start_time > 1.0:  #taking the frame of previous 1 sec ago
+    if curr_time - start_time > 0.5:  #taking the frame of previous 0.5 sec ago as firstFrame to compare with the current
             firstFrame = gray  #if we only want to detect the object when it moves
             start_time = curr_time
+    if delay is not None:
+        time.sleep(int(delay))
 
     # firstFrame = gray  #if we only want to detect the object when it moves
 

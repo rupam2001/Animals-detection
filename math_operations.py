@@ -21,9 +21,6 @@ def isTwoRectangeOverlap(rect1, rect2):
         return True
     return False
 
-# result =  isTwoRectangeOverlap((350, 286, 580 - 350, 515 - 286), (505, 488, 672 - 505, 593 - 488))
-
-# print(result)
 def getUnionOfTwoRects(rect1, rect2):
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
@@ -45,7 +42,7 @@ def getUnionOfTwoRects(rect1, rect2):
     return x, y, w, h
 
 
-def  getUnionOfRects(rect_list=[]):
+def getUnionOfRects(rect_list=[]):
     overlaped_rects = []
     overlaped_rects_indexs = []
     uniooned_rects = None
