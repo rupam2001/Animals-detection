@@ -4,9 +4,9 @@ import datetime
 import imutils
 import time
 import cv2
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
-#import tflite_runtime.interpreter as tflite
+from tflite_runtime.interpreter import Interpreter
 import math_operations as mathops
 from logger import Logger
 
@@ -51,8 +51,9 @@ def cropImg(frame, x, y, w, h):
 
 
 def loadModel(path="./"):
-    model = tf.keras.models.load_model(path)
-    return model
+    #model = tf.keras.models.load_model(path)
+    #return model
+    pass
 
 
 def preproccess_img(img):
@@ -69,11 +70,11 @@ model = None
 # classes = np.array(['cat', 'dog', 'nothing', 'nothing'])
 classes = np.array(["Animal", "Nothing"])
 def getClassesFromModelResult(result):
-    predicted_id = tf.math.argmax(result, axis=-1)
+    predicted_id = np.argmax(result, axis=-1)
     predicted_label_batch = classes[predicted_id]
-
+    
     return predicted_label_batch
-
+    return result
 
 def predict(model, imgs):
     result = model.predict(imgs)
@@ -84,7 +85,7 @@ def predict(model, imgs):
 
 def initTflite(path_to_model='./models/dogcat_from_ML_V3.tflite'):
     # Load TFLite model and allocate tensors.
-    interpreter = tf.contrib.lite.Interpreter(model_path=path_to_model)
+    interpreter = Interpreter(model_path=path_to_model)
     # Get input and output tensors.
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
@@ -117,7 +118,7 @@ while True:
     # grab the current frame and initialize the occupied/unoccupied
     # text
     frame = vs.read()
-
+  
     frame = frame if args.get("video", None) is None else frame[1]
     text = "Unoccupied"
 
@@ -133,6 +134,8 @@ while True:
         continue
     frame_count = 0
     # resize the frame, convert it to grayscale, and blur it
+    #print(frame, type(frame))
+    frame = frame[1]
     frame = imutils.resize(frame, width=500)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (21, 21), 0)
@@ -221,7 +224,7 @@ while True:
                     cv2.imwrite("{time.time()}.{result}.png".format(time=time, result=result), cropedFrame)
 
     # show the frame and record if the user presses a key
-    cv2.imshow("Animal Cam", frame)
+    #cv2.imshow("Animal Cam", frame)
     # cv2.imshow("Thresh", thresh)
     # cv2.imshow("Frame Delta", frameDelta)
     key = cv2.waitKey(1) & 0xFF
