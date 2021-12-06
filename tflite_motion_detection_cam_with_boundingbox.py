@@ -36,13 +36,13 @@ delay = args.get("delay", None)
 NUM_BOXES = 20
 
 # if the video argument is None, then we are reading from webcam
-if args.get("video", None) is None:
-    vs = VideoStream(src=0).start()
-    time.sleep(2.0)
-# otherwise, we are reading from a video file
-else:
-    vs = cv2.VideoCapture(args["video"])
-
+# if args.get("video", None) is None:
+#     vs = VideoStream(src=0).start()
+#     time.sleep(2.0)
+# # otherwise, we are reading from a video file
+# else:
+#     vs = cv2.VideoCapture(args["video"])
+vs = cv2.VideoCapture(0, cv2.CAP_V4L)
 
 def cropImg(frame, x, y, w, h):
     croped_img = frame[y:(y+h), x:(x+w)]
