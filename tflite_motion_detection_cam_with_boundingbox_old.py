@@ -6,7 +6,7 @@ import time
 import cv2
 import tensorflow as tf
 import numpy as np
-#import tflite_runtime.interpreter as tflite
+
 import math_operations as mathops
 from logger import Logger
 
@@ -47,7 +47,7 @@ else:
 def cropImg(frame, x, y, w, h):
     croped_img = frame[y:(y+h), x:(x+w)]
     return croped_img
-    #cv2.imwrite(f"{time.time()}.png", croped_img)
+    cv2.imwrite(f"{time.time()}.png", croped_img)
 
 
 def loadModel(path="./"):
@@ -84,7 +84,7 @@ def predict(model, imgs):
 
 def initTflite(path_to_model='./models/dogcat_from_ML_V3.tflite'):
     # Load TFLite model and allocate tensors.
-    interpreter = tf.contrib.lite.Interpreter(model_path=path_to_model)
+    interpreter = tf.lite.Interpreter(model_path=path_to_model)
     # Get input and output tensors.
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
@@ -189,13 +189,13 @@ while True:
             output_details), processed_img)
             result = getClassesFromModelResult(tf_lite_pred_output)
             print(result)
-            cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            pred_logger.log("[result:{result}]".format(result=result))
+            pred_logger.log(f"[result:{result}]")
             try:
                 if IS_SAVING_IMAGE:
                     print( "writing image ", unioned_box)
-                    cv2.imwrite("{time.time()}.{result}.png".format(time=time, result=result), unioned_image)
+                    cv2.imwrite(f"{time.time()}.{result}.png", unioned_image)
             except:
                 print("error writing image ", unioned_box)
 
@@ -214,11 +214,11 @@ while True:
                             output_details), processed_img)
                 result = getClassesFromModelResult(tf_lite_pred_output)
                 print(result, " (not union result)")
-                cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                pred_logger.log("[result:{result}]".format(result=result))
+                cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                pred_logger.log(f"[result:{result}]")
 
                 if IS_SAVING_IMAGE:
-                    cv2.imwrite("{time.time()}.{result}.png".format(time=time, result=result), cropedFrame)
+                    cv2.imwrite(f"{time.time()}.{result}.png", cropedFrame)
 
     # show the frame and record if the user presses a key
     cv2.imshow("Animal Cam", frame)
