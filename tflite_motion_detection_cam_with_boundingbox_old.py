@@ -67,7 +67,7 @@ def preproccess_img(img):
 model = None
 
 # classes = np.array(['cat', 'dog', 'nothing', 'nothing'])
-classes = np.array(["Animal", "Nothing"])
+classes = np.array(["Animal", "Others"])
 def getClassesFromModelResult(result):
     predicted_id = tf.math.argmax(result, axis=-1)
     predicted_label_batch = classes[predicted_id]
@@ -82,7 +82,8 @@ def predict(model, imgs):
     return predicted_label_batch
 
 
-def initTflite(path_to_model='./models/dogcat_from_ML_V3.tflite'):
+def initTflite(path_to_model=''):
+    print("Loading ", path_to_model)
     # Load TFLite model and allocate tensors.
     interpreter = tf.lite.Interpreter(model_path=path_to_model)
     # Get input and output tensors.
@@ -100,9 +101,9 @@ def tflitePredict(interpreter, IOdetails, image):
     return output_data
 
 
-test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite"]
+test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite", "./models/elephants_roadv4_1639217592.tflite", "./models/elephants_roadv5_1639218578.tflite", "./models/elephants_roadv6_1639219740.tflite", "./models/elephants_roadv7_1639589899.tflite"]
 
-interpreter, input_details, output_details = initTflite(path_to_model=test_models[2])
+interpreter, input_details, output_details = initTflite(path_to_model=test_models[-1])
 
 # initialize the first frame in the video stream
 firstFrame = None
@@ -189,13 +190,13 @@ while True:
             output_details), processed_img)
             result = getClassesFromModelResult(tf_lite_pred_output)
             print(result)
-            cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            pred_logger.log(f"[result:{result}]")
+            # pred_logger.log(f"[result:{result}]")
             try:
                 if IS_SAVING_IMAGE:
                     print( "writing image ", unioned_box)
-                    cv2.imwrite(f"{time.time()}.{result}.png", unioned_image)
+                    cv2.imwrite("{time.time()}.{result}.png".format(time=time, result=result), unioned_image)
             except:
                 print("error writing image ", unioned_box)
 
@@ -214,11 +215,11 @@ while True:
                             output_details), processed_img)
                 result = getClassesFromModelResult(tf_lite_pred_output)
                 print(result, " (not union result)")
-                cv2.putText(frame, f"{result}", (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                pred_logger.log(f"[result:{result}]")
+                cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # pred_logger.log(f"[result:{result}]")
 
                 if IS_SAVING_IMAGE:
-                    cv2.imwrite(f"{time.time()}.{result}.png", cropedFrame)
+                    cv2.imwrite("{time.time()}.{result}.png".format(time=time, result=result), cropedFrame)
 
     # show the frame and record if the user presses a key
     cv2.imshow("Animal Cam", frame)
@@ -234,6 +235,14 @@ while True:
             start_time = curr_time
     if delay is not None:
         time.sleep(int(delay))
+
+    if len(cnts) != 0:
+        preproccess_frame = preproccess_img(frame_copy)
+        tf_lite_pred_output = tflitePredict(interpreter, (input_details, output_details), processed_img)
+        result = getClassesFromModelResult(tf_lite_pred_output)
+
+        print("From Antire frame: ", result)
+
 
     # firstFrame = gray  #if we only want to detect the object when it moves
 
