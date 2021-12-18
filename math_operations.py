@@ -59,4 +59,25 @@ def getUnionOfRects(rect_list=[]):
         return None
     
     return uniooned_rects, overlaped_rects_indexs
-    
+
+def expandBox(x, y, w, h, by=0.1, limit=(500, 500)):
+    add_up_w = w * by
+    add_up_h = h * by
+
+    original = (x, y, w, h)
+
+    x = x - (add_up_w // 2)
+    y = y - (add_up_h // 2)
+
+    w +=  (add_up_w )
+    h +=  (add_up_h)
+
+    max_w, max_h = limit
+
+    if w > max_w or h > max_h:
+        return original
+    if x < 0 or y < 0:
+        return original
+
+    return int(x), int(y), int(w), int(h)
+

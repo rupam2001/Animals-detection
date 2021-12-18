@@ -1,6 +1,5 @@
 from imutils.video import VideoStream
 import argparse
-import datetime
 import imutils
 import time
 import cv2
@@ -47,7 +46,6 @@ else:
 def cropImg(frame, x, y, w, h):
     croped_img = frame[y:(y+h), x:(x+w)]
     return croped_img
-    cv2.imwrite(f"{time.time()}.png", croped_img)
 
 
 def loadModel(path="./"):
@@ -101,9 +99,9 @@ def tflitePredict(interpreter, IOdetails, image):
     return output_data
 
 
-test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite", "./models/elephants_roadv4_1639217592.tflite", "./models/elephants_roadv5_1639218578.tflite", "./models/elephants_roadv6_1639219740.tflite", "./models/elephants_roadv7_1639589899.tflite"]
+test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite", "./models/elephants_roadv9_1639668041.tflite", "./models/elephants_roadv10_1639736606.tflite"]
 
-interpreter, input_details, output_details = initTflite(path_to_model=test_models[-1])
+interpreter, input_details, output_details = initTflite(path_to_model=test_models[-2])
 
 # initialize the first frame in the video stream
 firstFrame = None
@@ -167,6 +165,7 @@ while True:
             # compute the bounding box for the contour, draw it on the frame,
             # and update the text
         (x, y, w, h) = cv2.boundingRect(c)
+        (x, y, w, h) = mathops.expandBox(x, y, w, h, by=0.3)
         box_list.append((x, y, w, h))
 
         count += 1
@@ -236,12 +235,12 @@ while True:
     if delay is not None:
         time.sleep(int(delay))
 
-    if len(cnts) != 0:
-        preproccess_frame = preproccess_img(frame_copy)
-        tf_lite_pred_output = tflitePredict(interpreter, (input_details, output_details), processed_img)
-        result = getClassesFromModelResult(tf_lite_pred_output)
+    # if len(cnts) != 0:
+    #     preproccess_frame = preproccess_img(frame_copy)
+    #     tf_lite_pred_output = tflitePredict(interpreter, (input_details, output_details), processed_img)
+    #     result = getClassesFromModelResult(tf_lite_pred_output)
 
-        print("From Antire frame: ", result)
+    #     print("From Antire frame: ", result)
 
 
     # firstFrame = gray  #if we only want to detect the object when it moves
