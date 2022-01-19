@@ -1,28 +1,23 @@
+#!/usr/bin/env/python3
 from imutils.video import VideoStream
 import argparse
 import imutils
 import time
 import cv2
-import tensorflow as tf
-# from tflite_runtime.interpreter import Interpreter
+#import tensorflow as tf
+from tflite_runtime.interpreter import Interpreter
 import numpy as np
-
-# import socket, pickle, os 
-
-# s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-# s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 10000000)
-# serverip = "localhost"
-# serverport = 5000
-
-# cv2.namedWindow("output", cv2.WINDOW_NORMAL)   
 
 import math_operations as mathops
 from logger import Logger
+from physical_output import PhysicalOutput
 
-pred_logger = Logger(logFile="prediction")
+pout = PhysicalOutput()
+
+pred_logger = Logger(logFile="prediction_new")
 pred_logger.log("init")
 
-IS_SAVING_IMAGE =  False
+IS_SAVING_IMAGE = False
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -45,13 +40,13 @@ delay = args.get("delay", None)
 NUM_BOXES = 20
 
 # if the video argument is None, then we are reading from webcam
-if args.get("video", None) is None:
-   vs = VideoStream(src=0).start()
-   time.sleep(2.0)
+#if args.get("video", None) is None:
+#    vs = VideoStream(src=0).start()
+#    time.sleep(2.0)
 # otherwise, we are reading from a video file
-else:
-   vs = cv2.VideoCapture(args["video"])
-# vs = cv2.VideoCapture(0)
+#else:
+#    vs = cv2.VideoCapture(args["video"])
+vs = cv2.VideoCapture(0, cv2.CAP_V4L)
 
 def cropImg(frame, x, y, w, h):
     croped_img = frame[y:(y+h), x:(x+w)]
@@ -65,7 +60,7 @@ def loadModel(path="./"):
 
 def preproccess_img(img):
     img = cv2.resize(img, (224, 224))
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # print(img.shape)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     tensor = np.array(img, dtype=np.float32)
@@ -98,7 +93,7 @@ def predict(model, imgs):
 def initTflite(path_to_model=''):
     print("Loading ", path_to_model)
     # Load TFLite model and allocate tensors.
-    interpreter = tf.lite.Interpreter(model_path=path_to_model)
+    interpreter = Interpreter(model_path=path_to_model)
     # Get input and output tensors.
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
@@ -114,7 +109,7 @@ def tflitePredict(interpreter, IOdetails, image):
     return output_data
 
 
-test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite", "./models/elephants_roadv9_1639668041.tflite", "./models/elephants_roadv10_1639736606.tflite", "./models/animals_road_inceptionv3_v1_1640343942.tflite", "./models/animals_road_scratch_v1_1640762587.tflite", "./models/animals_road_scratch_v2_1640764809.tflite", "./models/animals_road_scratch_v3_1640772693.tflite", "./models/animals_road_scratch_v4_1640773429.tflite"]
+test_models = ["./models/dogcat_from_ML_V3.tflite", "./models/dogcat_nothing.tflite", "./models/animals_roadv2.tflite", "./models/elephants_roadv9_1639668041.tflite", "./models/elephants_roadv10_1639736606.tflite", "./models/animals_road_inceptionv3_v1_1640343942.tflite", "./models/animals_road_scratch_v1_1640762587.tflite", "./models/animals_road_scratch_v2_1640764809.tflite", "./models/animals_road_scratch_v3_1640772693.tflite", "/home/pi/Animals-detection/models/animals_road_scratch_v4_1640773429.tflite"]
 
 interpreter, input_details, output_details = initTflite(path_to_model=test_models[-1])
 
@@ -125,9 +120,13 @@ curr_time = time.time()
 
 frames_to_skip = 15
 frame_count = 0
+isAnimalDetected = False
 
 while True:
-
+    pout.stop()
+    if isAnimalDetected:
+       pout.start()
+       isAnimalDetected = False
     # grab the current frame and initialize the occupied/unoccupied
     # text
     frame = vs.read()
@@ -140,18 +139,15 @@ while True:
     if frame is None:
         break
 
-    # ls.buffer.append(b'--frame\r\n'
-    #                 b'Content-Type: image/jpeg\r\n\r\n' + frame[1].tobytes() + b'\r\n')
-
     
     #for skipping
     frame_count += 1
     if args.get("video", None) is not None and  frame_count < frames_to_skip:
         continue
     frame_count = 0
-    # frame = frame[1]
+    frame = frame[1]
     # resize the frame, convert it to grayscale, and blur it
-    frame = imutils.resize(frame, width=1200)
+    frame = imutils.resize(frame, width=500)
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (21, 21), 0)
     # if the first frame is None, initialize it
@@ -208,9 +204,11 @@ while True:
             output_details), unioned_image_preprocessed)
             result = getClassesFromModelResult(tf_lite_pred_output)[0]
             print(result)
+            if result == classes[0]:
+               isAnimalDetected = True
             cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-            # pred_logger.log(f"[result:{result}]")
+            pred_logger.log("[result:{result}]".format(result=result))
             try:
                 if IS_SAVING_IMAGE:
                     print( "writing image ", unioned_box)
@@ -233,20 +231,18 @@ while True:
                             output_details), processed_img)
                 result = getClassesFromModelResult(tf_lite_pred_output)[0]
                 print(result, " (not union result)")
+                if result == classes[0]:
+                   isAnimalDetected = True
                 cv2.putText(frame, "{result}".format(result=result), (x + w // 2, y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                # pred_logger.log(f"[result:{result}]")
+                pred_logger.log("[result:{result}]".format(result=result))
 
                 if IS_SAVING_IMAGE:
                     cv2.imwrite("./export/{time}.{result}.png".format(time=time.time(), result=result), cropedFrame)
 
     # show the frame and record if the user presses a key
-    cv2.imshow("Animal Cam", frame)
-    
-
-    # ret, buffer = cv2.imencode(".jpg", frame,[int(cv2.IMWRITE_JPEG_QUALITY),30])    
-    # x_as_bytes = pickle.dumps(buffer)    
-    # s.sendto(x_as_bytes,(serverip , serverport)) 
-
+    #cv2.imshow("Animal Cam", frame)
+    # cv2.imshow("Thresh", thresh)
+    # cv2.imshow("Frame Delta", frameDelta)
     key = cv2.waitKey(1) & 0xFF
     # if the `q` key is pressed, break from the lop
     if key == ord("q"):
@@ -257,7 +253,6 @@ while True:
             start_time = curr_time
     if delay is not None:
         time.sleep(int(delay))
-    
 
     # if len(cnts) != 0:
     #     preproccess_frame = preproccess_img(frame_copy)
